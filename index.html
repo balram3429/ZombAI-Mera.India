@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incredible India — Interactive State Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--saffron:#FF6B00;--deep:#0f0820;--gold:#f5a623;--border:rgba(255,255,255,0.11);--card-bg:rgba(255,255,255,0.055);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--deep);color:#fff;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;background-image:radial-gradient(ellipse at 15% 15%,rgba(255,107,0,.09) 0%,transparent 55%),radial-gradient(ellipse at 85% 85%,rgba(19,136,8,.07) 0%,transparent 55%);}
+header{text-align:center;padding:1.4rem 1rem 0.6rem;position:relative;z-index:2;}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.8rem);font-weight:900;background:linear-gradient(135deg,#FF6B00 0%,#f5a623 50%,#fff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.5px;}
+header p{color:rgba(255,255,255,.38);font-size:.75rem;margin-top:.3rem;letter-spacing:2.5px;text-transform:uppercase;}
+.bar{display:flex;width:68px;height:3px;margin:.45rem auto;border-radius:2px;overflow:hidden;}
+.bar span:nth-child(1){flex:1;background:#FF9933;}
+.bar span:nth-child(2){flex:1;background:#fff;}
+.bar span:nth-child(3){flex:1;background:#138808;}
+.layout{display:flex;gap:1rem;max-width:1480px;margin:0 auto;padding:0 .8rem 2rem;align-items:flex-start;position:relative;z-index:1;}
+.map-panel{flex:0 0 auto;width:min(490px,46vw);min-width:290px;position:sticky;top:.8rem;}
+@media(max-width:840px){.layout{flex-direction:column;}.map-panel{width:100%;position:static;}}
+.map-box{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:16px;padding:.7rem;}
+.map-hint{text-align:center;font-size:.67rem;color:rgba(255,255,255,.28);margin-bottom:.4rem;letter-spacing:1.5px;text-transform:uppercase;}
+#india-svg{width:100%;height:auto;display:block;}
+.sp{stroke:rgba(5,2,14,.9);stroke-width:.5;cursor:pointer;transition:filter .15s,stroke .15s,stroke-width .15s;}
+.sp:hover{filter:brightness(1.38) drop-shadow(0 0 5px rgba(255,107,0,.7));stroke:#FF6B00;stroke-width:1.4;}
+.sp.active{filter:brightness(1.55) drop-shadow(0 0 11px rgba(255,107,0,1));stroke:#FF6B00;stroke-width:2;}
+.lbl{font-size:4.5px;fill:rgba(255,255,255,.82);pointer-events:none;font-family:sans-serif;font-weight:700;text-anchor:middle;dominant-baseline:central;}
+#tip{position:fixed;background:rgba(10,4,24,.95);border:1px solid rgba(255,107,0,.45);border-radius:7px;padding:5px 11px;font-size:.76rem;color:#fff;pointer-events:none;display:none;z-index:999;backdrop-filter:blur(8px);}
+.info-panel{flex:1 1 auto;min-width:0;}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;text-align:center;gap:.8rem;border:1px dashed rgba(255,255,255,.09);border-radius:16px;padding:2rem;opacity:.5;}
+.welcome .icon{font-size:3.2rem;}
+.welcome h3{font-family:'Playfair Display',serif;font-size:1.25rem;color:rgba(255,255,255,.65);}
+.welcome p{font-size:.83rem;line-height:1.6;color:rgba(255,255,255,.38);}
+.state-info{display:none;}
+.state-info.on{display:block;animation:fadeUp .32s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.shead{display:flex;align-items:center;gap:.9rem;margin-bottom:1rem;padding-bottom:.9rem;border-bottom:1px solid var(--border);}
+.semoji{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;border:2px solid rgba(255,255,255,.13);background:rgba(255,107,0,.13);}
+.sname{font-family:'Playfair Display',serif;font-size:clamp(1.3rem,2.6vw,2.1rem);font-weight:900;background:linear-gradient(90deg,#FF6B00,#f5a623);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;}
+.stagline{color:rgba(255,255,255,.37);font-size:.71rem;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.62rem;}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:11px;padding:.8rem .88rem;transition:border-color .18s,transform .18s,background .18s;}
+.card:hover{border-color:rgba(255,107,0,.32);background:rgba(255,107,0,.04);transform:translateY(-2px);}
+.card.w2{grid-column:span 2;}
+@media(max-width:480px){.card.w2{grid-column:span 1;}}
+.clabel{display:flex;align-items:center;gap:.3rem;font-size:.61rem;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold);margin-bottom:.38rem;}
+.cval{font-size:.85rem;line-height:1.5;color:rgba(255,255,255,.83);}
+.cval strong{display:block;font-size:.96rem;color:#fff;font-weight:600;line-height:1.3;}
+.tags{display:flex;flex-wrap:wrap;gap:.26rem;margin-top:.26rem;}
+.tag{background:rgba(255,107,0,.13);border:1px solid rgba(255,107,0,.28);border-radius:20px;padding:2px 8px;font-size:.69rem;color:rgba(255,255,255,.8);line-height:1.6;}
+.tag.g{background:rgba(19,136,8,.14);border-color:rgba(19,136,8,.38);}
+.tag.b{background:rgba(30,120,220,.14);border-color:rgba(30,120,220,.38);}
+.tag.y{background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.38);}
+.dbtn{margin-top:.42rem;background:rgba(255,107,0,.17);border:1px solid rgba(255,107,0,.42);color:#fff;padding:4px 13px;border-radius:20px;font-size:.69rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .18s;}
+.dbtn:hover{background:rgba(255,107,0,.33);}
+.modal-wrap{display:none;position:fixed;inset:0;background:rgba(4,1,14,.88);z-index:300;align-items:center;justify-content:center;padding:1rem;}
+.modal-wrap.on{display:flex;}
+.modal{background:linear-gradient(145deg,#1a0b35,#0d1828);border:1px solid rgba(255,107,0,.28);border-radius:16px;padding:1.5rem;max-width:510px;width:100%;max-height:82vh;overflow-y:auto;position:relative;animation:fadeUp .28s ease;}
+.modal h3{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--gold);margin-bottom:.3rem;}
+.mbtn{position:absolute;top:.85rem;right:.85rem;background:rgba(255,255,255,.07);border:1px solid var(--border);color:rgba(255,255,255,.6);width:27px;height:27px;border-radius:50%;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s;}
+.mbtn:hover{background:rgba(255,107,0,.28);color:#fff;}
+.dcnt{font-size:.72rem;color:rgba(255,255,255,.34);margin-bottom:.75rem;letter-spacing:1px;}
+.dlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:.28rem;}
+.ditem{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:4px 8px;font-size:.74rem;color:rgba(255,255,255,.76);display:flex;gap:5px;align-items:center;}
+.dnum{color:var(--gold);font-size:.6rem;font-weight:600;min-width:16px;}
+footer{text-align:center;padding:1rem;font-size:.66rem;color:rgba(255,255,255,.16);}
+</style>
+</head>
+<body>
+<header>
+  <h1>🇮🇳 Incredible India</h1>
+  <div class="bar"><span></span><span></span><span></span></div>
+  <p>Interactive State Explorer — Click any state to discover</p>
+</header>
+<div id="tip"></div>
+<div class="layout">
+  <div class="map-panel">
+    <div class="map-box">
+      <div class="map-hint">🗺️ Click / Tap any state on the map</div>
+      <!-- Real India SVG map with accurate state boundaries -->
+      <svg id="india-svg" viewBox="0 0 650 750" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Jammu & Kashmir -->
+        <path id="JK" class="sp" fill="#e74c3c" d="M143,22 L153,18 L168,14 L190,12 L208,16 L224,22 L238,30 L248,42 L252,55 L246,68 L235,76 L222,82 L208,86 L196,84 L182,78 L168,70 L156,60 L144,46 Z"/>
+        <!-- Ladakh -->
+        <path id="LA" class="sp" fill="#e67e22" d="M248,42 L262,34 L278,26 L298,20 L318,18 L338,22 L352,32 L358,46 L354,60 L342,70 L326,76 L308,78 L290,74 L272,66 L258,56 Z"/>
+        <!-- Himachal Pradesh -->
+        <path id="HP" class="sp" fill="#f1c40f" d="M196,84 L208,86 L222,82 L235,76 L246,68 L252,80 L248,96 L238,108 L224,116 L210,120 L198,116 L188,106 Z"/>
+        <!-- Punjab -->
+        <path id="PB" class="sp" fill="#27ae60" d="M144,84 L160,80 L174,82 L188,86 L188,106 L182,120 L170,130 L154,132 L140,124 L132,110 L134,96 Z"/>
+        <!-- Uttarakhand -->
+        <path id="UK" class="sp" fill="#2ecc71" d="M252,80 L268,74 L284,78 L298,88 L306,100 L302,114 L288,122 L274,124 L260,118 L250,106 L248,96 Z"/>
+        <!-- Haryana -->
+        <path id="HR" class="sp" fill="#1abc9c" d="M154,132 L170,130 L182,120 L188,106 L198,116 L198,132 L192,146 L180,154 L164,154 L150,146 L146,134 Z"/>
+        <!-- Delhi -->
+        <path id="DL" class="sp" fill="#3498db" d="M192,128 L200,126 L206,134 L204,144 L196,148 L188,144 L186,136 Z"/>
+        <!-- Uttar Pradesh -->
+        <path id="UP" class="sp" fill="#9b59b6" d="M198,132 L210,120 L224,116 L238,108 L250,106 L260,118 L274,124 L288,122 L302,114 L318,118 L334,128 L346,142 L350,158 L344,174 L330,184 L312,190 L292,192 L270,190 L252,186 L234,178 L218,166 L204,154 L192,146 L198,132 Z"/>
+        <!-- Rajasthan -->
+        <path id="RJ" class="sp" fill="#e74c3c" d="M96,120 L118,112 L134,108 L140,124 L154,132 L146,134 L150,146 L164,154 L180,154 L192,166 L188,186 L178,202 L164,216 L146,228 L126,238 L106,242 L86,236 L72,220 L66,200 L68,178 L76,158 L86,140 Z"/>
+        <!-- Bihar -->
+        <path id="BR" class="sp" fill="#e67e22" d="M312,190 L330,184 L348,186 L364,194 L374,208 L370,224 L356,234 L338,238 L320,234 L306,220 L302,206 Z"/>
+        <!-- Jharkhand -->
+        <path id="JH" class="sp" fill="#f39c12" d="M320,234 L338,238 L356,234 L374,242 L380,258 L374,276 L358,288 L338,292 L318,284 L306,268 L306,250 Z"/>
+        <!-- West Bengal -->
+        <path id="WB" class="sp" fill="#27ae60" d="M364,194 L384,190 L402,196 L414,212 L416,232 L408,254 L396,272 L380,278 L374,276 L380,258 L374,242 L356,234 L370,224 L374,208 Z"/>
+        <!-- Sikkim -->
+        <path id="SK" class="sp" fill="#16a085" d="M402,172 L416,168 L424,178 L420,190 L408,192 L400,184 Z"/>
+        <!-- Arunachal Pradesh -->
+        <path id="AR" class="sp" fill="#8e44ad" d="M416,142 L446,136 L478,130 L510,128 L530,136 L532,152 L518,162 L496,168 L472,170 L448,166 L424,160 L416,150 Z"/>
+        <!-- Assam -->
+        <path id="AS" class="sp" fill="#2980b9" d="M424,160 L448,166 L472,170 L496,168 L518,162 L524,176 L516,188 L500,196 L480,200 L460,204 L440,202 L420,196 L408,192 L420,190 L424,178 L416,168 L416,150 Z"/>
+        <!-- Nagaland -->
+        <path id="NL" class="sp" fill="#c0392b" d="M500,196 L516,188 L524,200 L522,214 L508,222 L494,216 L490,204 Z"/>
+        <!-- Manipur -->
+        <path id="MN" class="sp" fill="#d35400" d="M494,216 L508,222 L514,236 L508,250 L494,256 L480,248 L476,234 L482,220 Z"/>
+        <!-- Mizoram -->
+        <path id="MZ" class="sp" fill="#7f8c8d" d="M480,248 L494,256 L496,270 L484,278 L470,272 L466,258 Z"/>
+        <!-- Tripura -->
+        <path id="TR" class="sp" fill="#27ae60" d="M460,248 L476,248 L480,260 L470,272 L456,268 L452,256 Z"/>
+        <!-- Meghalaya -->
+        <path id="ML" class="sp" fill="#2ecc71" d="M416,208 L440,208 L456,212 L460,226 L448,234 L428,234 L414,226 Z"/>
+        <!-- Odisha -->
+        <path id="OD" class="sp" fill="#e91e63" d="M318,284 L338,292 L358,288 L378,296 L392,312 L394,334 L382,354 L362,366 L340,370 L318,358 L304,338 L302,314 Z"/>
+        <!-- Chhattisgarh -->
+        <path id="CG" class="sp" fill="#00bcd4" d="M252,242 L276,238 L298,236 L306,250 L306,268 L318,284 L302,314 L284,326 L262,322 L244,306 L238,282 L242,260 Z"/>
+        <!-- Madhya Pradesh -->
+        <path id="MP" class="sp" fill="#ff5722" d="M178,202 L188,186 L192,166 L204,154 L218,166 L234,178 L252,186 L270,190 L292,192 L298,204 L298,220 L292,236 L276,238 L252,242 L238,254 L220,258 L200,252 L182,238 L172,222 Z"/>
+        <!-- Gujarat -->
+        <path id="GJ" class="sp" fill="#9b59b6" d="M66,200 L72,220 L86,236 L96,250 L106,264 L112,282 L106,298 L92,308 L74,310 L56,298 L44,278 L40,256 L46,234 L58,218 Z"/>
+        <!-- Maharashtra -->
+        <path id="MH" class="sp" fill="#e74c3c" d="M106,264 L126,256 L146,250 L166,250 L182,254 L200,252 L220,258 L238,270 L244,288 L238,308 L224,326 L206,338 L186,344 L164,340 L146,328 L128,310 L112,292 L106,276 Z"/>
+        <!-- Telangana -->
+        <path id="TG" class="sp" fill="#e67e22" d="M244,288 L262,282 L280,280 L298,286 L306,302 L304,322 L292,338 L272,346 L252,340 L238,324 L236,306 Z"/>
+        <!-- Andhra Pradesh -->
+        <path id="AP" class="sp" fill="#f39c12" d="M304,322 L318,318 L338,326 L362,338 L378,354 L386,374 L380,396 L364,414 L344,424 L320,422 L300,408 L286,388 L280,364 L280,342 L292,338 Z"/>
+        <!-- Karnataka -->
+        <path id="KA" class="sp" fill="#27ae60" d="M164,340 L186,344 L206,338 L224,342 L238,354 L252,368 L260,386 L256,406 L242,422 L220,432 L196,434 L172,424 L152,408 L140,388 L138,366 L146,348 Z"/>
+        <!-- Goa -->
+        <path id="GA" class="sp" fill="#3498db" d="M136,356 L148,352 L156,360 L152,372 L140,374 L132,366 Z"/>
+        <!-- Kerala -->
+        <path id="KL" class="sp" fill="#2ecc71" d="M196,434 L220,432 L234,444 L238,464 L232,486 L220,506 L204,520 L188,524 L174,512 L168,490 L170,466 L180,448 Z"/>
+        <!-- Tamil Nadu -->
+        <path id="TN" class="sp" fill="#9b59b6" d="M242,422 L264,416 L286,418 L306,424 L318,440 L322,462 L314,484 L298,504 L278,518 L258,524 L238,516 L220,500 L212,478 L214,458 L220,440 L234,444 L220,432 Z"/>
+        <!-- Puducherry (small, shown as marker) -->
+        <rect id="PY" class="sp" fill="#e74c3c" x="302" y="468" width="10" height="10" rx="2"/>
+        <!-- Andaman & Nicobar -->
+        <path id="AN" class="sp" fill="#16a085" d="M560,320 L566,316 L572,322 L574,334 L568,344 L560,342 L556,332 Z"/>
+        <!-- Lakshadweep -->
+        <path id="LD" class="sp" fill="#8e44ad" d="M104,430 L110,428 L114,434 L112,440 L106,440 L102,436 Z"/>
+        <!-- Chandigarh (tiny, shown as marker) -->
+        <rect id="CH" class="sp" fill="#e91e63" x="177" y="121" width="9" height="9" rx="2"/>
+        <!-- Dadra and Nagar Haveli / Daman Diu -->
+        <rect id="DD" class="sp" fill="#d35400" x="88" y="270" width="10" height="10" rx="2"/>
+
+        <!-- State Labels -->
+        <text class="lbl" x="196" y="46">J&K</text>
+        <text class="lbl" x="305" y="48">Ladakh</text>
+        <text class="lbl" x="220" y="102">HP</text>
+        <text class="lbl" x="162" y="108">PB</text>
+        <text class="lbl" x="278" y="100">UK</text>
+        <text class="lbl" x="170" y="144">HR</text>
+        <text class="lbl" x="196" y="138">DL</text>
+        <text class="lbl" x="272" y="158">Uttar Pradesh</text>
+        <text class="lbl" x="130" y="182">Rajasthan</text>
+        <text class="lbl" x="340" y="212">Bihar</text>
+        <text class="lbl" x="344" y="264">JH</text>
+        <text class="lbl" x="390" y="234">WB</text>
+        <text class="lbl" x="412" y="182">SK</text>
+        <text class="lbl" x="474" y="148">Arunachal Pradesh</text>
+        <text class="lbl" x="466" y="184">Assam</text>
+        <text class="lbl" x="506" y="208">NL</text>
+        <text class="lbl" x="495" y="234">MN</text>
+        <text class="lbl" x="482" y="262">MZ</text>
+        <text class="lbl" x="464" y="258">TR</text>
+        <text class="lbl" x="436" y="222">ML</text>
+        <text class="lbl" x="356" y="328">Odisha</text>
+        <text class="lbl" x="276" y="282">CG</text>
+        <text class="lbl" x="236" y="216">Madhya Pradesh</text>
+        <text class="lbl" x="78" y="258">GJ</text>
+        <text class="lbl" x="180" y="300">Maharashtra</text>
+        <text class="lbl" x="272" y="316">TG</text>
+        <text class="lbl" x="336" y="372">AP</text>
+        <text class="lbl" x="196" y="388">Karnataka</text>
+        <text class="lbl" x="144" y="362">Goa</text>
+        <text class="lbl" x="196" y="480">KL</text>
+        <text class="lbl" x="272" y="470">Tamil Nadu</text>
+        <text class="lbl" x="307" y="476">PY</text>
+        <text class="lbl" x="563" y="330">A&N</text>
+        <text class="lbl" x="108" y="436">LD</text>
+        <text class="lbl" x="183" y="127">CH</text>
+        <text class="lbl" x="94" y="278">DD</text>
+
+        <!-- Ocean labels -->
+        <text style="font-size:6px;fill:rgba(100,180,255,.3);font-family:sans-serif;" x="50" y="400" transform="rotate(-90,50,400)">Arabian Sea</text>
+        <text style="font-size:6px;fill:rgba(100,180,255,.3);font-family:sans-serif;" x="420" y="420">Bay of Bengal</text>
+        <text style="font-size:6px;fill:rgba(100,180,255,.3);font-family:sans-serif;" x="220" y="580">Indian Ocean</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="welcome" id="welcomeMsg">
+      <div class="icon">🏛️</div>
+      <h3>Explore Incredible India</h3>
+      <p>Tap any state on the map to view its capital, chief minister, ruling party, districts, PIN codes, climate, population, tourist spots, rivers, crops, festivals &amp; temples.</p>
+      <small style="color:rgba(255,255,255,.18);margin-top:.4rem">28 States · 8 Union Territories</small>
+    </div>
+    <div class="state-info" id="stateInfo">
+      <div class="shead">
+        <div class="semoji" id="sEmoji"></div>
+        <div><div class="sname" id="sName"></div><div class="stagline" id="sTagline"></div></div>
+      </div>
+      <div class="grid" id="sGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-wrap" id="distModal">
+  <div class="modal">
+    <button class="mbtn" onclick="closeM()">✕</button>
+    <h3 id="mTitle"></h3>
+    <div class="dcnt" id="mCnt"></div>
+    <div class="dlist" id="mList"></div>
+  </div>
+</div>
+
+<footer>Data for educational reference. Political info current as of 2025–26. Population: Census 2011.</footer>
+
+<script>
+const SD={
+  JK:{n:"Jammu & Kashmir",e:"❄️",tl:"Heaven on Earth",cap:"Srinagar (Summer) / Jammu (Winter)",cm:"Omar Abdullah",party:"National Conference (NC)",pop:"1.25 Crore",pin:"180001–194404",clim:"Alpine north (heavy snowfall), subtropical south; extreme seasonal variation",fam:"Shikara rides on Dal Lake, Pashmina shawls, Kashmiri cuisine, Saffron fields",tour:"Dal Lake Srinagar, Gulmarg ski resort, Pahalgam, Sonamarg, Vaishno Devi",riv:"Jhelum, Chenab, Ravi, Indus",crop:"Saffron, Apple, Rice, Wheat, Maize",fest:"Eid ul-Fitr, Baisakhi, Navreh, Hemis Festival, Tulip Festival",temp:"Vaishno Devi Temple, Shankaracharya Temple, Raghunath Temple Jammu",dist:["Anantnag","Bandipora","Baramulla","Budgam","Doda","Ganderbal","Jammu","Kathua","Kishtwar","Kulgam","Kupwara","Poonch","Pulwama","Rajouri","Ramban","Reasi","Samba","Shopian","Srinagar","Udhampur"]},
+  LA:{n:"Ladakh",e:"🏔️",tl:"Land of High Passes",cap:"Leh",cm:"UT — Lt. Governor B. D. Mishra",party:"Union Territory (Direct Administration)",pop:"2.74 Lakh",pin:"194101–194401",clim:"Cold desert; extreme winters (−30°C), mild pleasant summers",fam:"Himalayan monasteries, Trekking, Thangka paintings, Pangong Lake",tour:"Pangong Tso Lake, Nubra Valley, Leh Palace, Hemis Monastery, Magnetic Hill",riv:"Indus, Shyok, Zanskar",crop:"Barley, Peas, Wheat, Buckwheat",fest:"Hemis Festival, Losar, Galdan Namchot, Ladakh Festival",temp:"Hemis Monastery, Thiksey Monastery, Diskit Monastery, Stakna Monastery",dist:["Leh","Kargil"]},
+  HP:{n:"Himachal Pradesh",e:"🍎",tl:"Dev Bhoomi — Land of Gods",cap:"Shimla",cm:"Sukhvinder Singh Sukhu",party:"INC",pop:"68.6 Lakh",pin:"171001–177601",clim:"Alpine north, subtropical south; heavy snowfall, pleasant summers",fam:"Apple orchards, Hill stations, Adventure sports, Pashmina wool",tour:"Shimla, Manali, Dharamsala, Spiti Valley, Kasol, Kullu",riv:"Beas, Sutlej, Ravi, Chenab, Yamuna",crop:"Apple, Maize, Wheat, Potato, Ginger",fest:"Dussehra (Kullu), Lavi Fair, Minjar Fair, Shivratri (Mandi)",temp:"Hidimba Devi Temple Manali, Jwala Ji Temple, Baijnath Temple, Chamunda Devi",dist:["Bilaspur","Chamba","Hamirpur","Kangra","Kinnaur","Kullu","Lahaul & Spiti","Mandi","Shimla","Sirmaur","Solan","Una"]},
+  PB:{n:"Punjab",e:"🌾",tl:"Land of Five Rivers",cap:"Chandigarh",cm:"Bhagwant Mann",party:"Aam Aadmi Party (AAP)",pop:"2.77 Crore",pin:"140001–152128",clim:"Semi-arid; hot summers, cold winters, moderate monsoon",fam:"Bhangra & Giddha dance, Phulkari embroidery, Lassi, Butter chicken",tour:"Golden Temple Amritsar, Wagah Border, Jallianwala Bagh, Anandpur Sahib",riv:"Sutlej, Beas, Ravi, Chenab, Jhelum",crop:"Wheat, Rice, Sugarcane, Cotton, Maize",fest:"Baisakhi, Lohri, Gurpurabs, Teej, Hola Mohalla",temp:"Golden Temple (Harmandir Sahib), Durgiana Temple, Anandpur Sahib Gurudwara",dist:["Amritsar","Barnala","Bathinda","Faridkot","Fatehgarh Sahib","Fazilka","Ferozepur","Gurdaspur","Hoshiarpur","Jalandhar","Kapurthala","Ludhiana","Mansa","Moga","Mohali","Muktsar","Nawanshahr","Pathankot","Patiala","Rupnagar","Sangrur","Tarn Taran"]},
+  UK:{n:"Uttarakhand",e:"🙏",tl:"Dev Bhoomi — Land of Gods",cap:"Dehradun",cm:"Pushkar Singh Dhami",party:"BJP",pop:"1.01 Crore",pin:"244001–263680",clim:"Subtropical plains, cold alpine Himalayas; Char Dham pilgrimage zone",fam:"Char Dham pilgrimage, Yoga capital Rishikesh, River rafting, Jim Corbett",tour:"Rishikesh, Haridwar, Nainital, Jim Corbett NP, Auli ski resort, Kedarnath",riv:"Ganga, Yamuna, Bhagirathi, Alaknanda, Mandakini",crop:"Rice, Wheat, Millets, Potato, Soybean",fest:"Kumbh Mela Haridwar, Uttarayani, Phool Dei, Ganga Dussehra",temp:"Kedarnath Temple, Badrinath Temple, Gangotri Temple, Yamunotri Temple",dist:["Almora","Bageshwar","Chamoli","Champawat","Dehradun","Haridwar","Nainital","Pauri Garhwal","Pithoragarh","Rudraprayag","Tehri Garhwal","Udham Singh Nagar","Uttarkashi"]},
+  HR:{n:"Haryana",e:"🌾",tl:"Hariyala Haryana",cap:"Chandigarh",cm:"Nayab Singh Saini",party:"BJP",pop:"2.54 Crore",pin:"121001–136156",clim:"Semi-arid; very hot summers, cold winters, moderate rainfall",fam:"Wrestling & sports culture, Dairy farming, Basmati rice, Kurukshetra",tour:"Kurukshetra, Sultanpur Bird Sanctuary, Pinjore Gardens, Morni Hills",riv:"Yamuna, Ghaggar, Saraswati (dry river)",crop:"Wheat, Rice, Sugarcane, Mustard, Cotton",fest:"Teej, Baisakhi, Lohri, Surajkund Crafts Mela",temp:"Brahma Sarovar Kurukshetra, Mata Mansa Devi, Sthaneshwar Mahadev",dist:["Ambala","Bhiwani","Charkhi Dadri","Faridabad","Fatehabad","Gurugram","Hisar","Jhajjar","Jind","Kaithal","Karnal","Kurukshetra","Mahendragarh","Nuh","Palwal","Panchkula","Panipat","Rewari","Rohtak","Sirsa","Sonipat","Yamunanagar"]},
+  DL:{n:"Delhi",e:"🏛️",tl:"Heart of India",cap:"New Delhi",cm:"Rekha Gupta",party:"BJP",pop:"1.68 Crore",pin:"110001–110096",clim:"Semi-arid; very hot summers (47°C), cold winters, heavy monsoon",fam:"Historical monuments, Street food, Political capital, Shopping",tour:"Red Fort, Qutub Minar, India Gate, Humayun's Tomb, Lotus Temple, Akshardham",riv:"Yamuna",crop:"Vegetables, Wheat (peri-urban areas)",fest:"Republic Day Parade, Independence Day, Diwali, Holi, Eid",temp:"Akshardham Temple, ISKCON Temple, Lotus Temple (Bahai), Birla Mandir",dist:["Central Delhi","East Delhi","New Delhi","North Delhi","North East Delhi","North West Delhi","Shahdara","South Delhi","South East Delhi","South West Delhi","West Delhi"]},
+  UP:{n:"Uttar Pradesh",e:"🕌",tl:"Largest State by Population",cap:"Lucknow",cm:"Yogi Adityanath",party:"BJP",pop:"19.95 Crore",pin:"201001–285223",clim:"Subtropical; very hot summers, cold winters, good monsoon",fam:"Taj Mahal, Varanasi Ghats, Lucknowi chikankari embroidery, Nawabi cuisine",tour:"Agra (Taj Mahal), Varanasi, Mathura-Vrindavan, Prayagraj, Lucknow, Ayodhya",riv:"Ganga, Yamuna, Gomti, Sarayu, Betwa, Chambal",crop:"Wheat, Sugarcane, Rice, Potato, Mustard",fest:"Kumbh Mela, Diwali, Holi, Eid, Ram Navami, Janmashtami",temp:"Kashi Vishwanath Varanasi, Ram Janmabhoomi Ayodhya, Vrindavan temples",dist:["Agra","Aligarh","Ambedkar Nagar","Amethi","Amroha","Auraiya","Ayodhya","Azamgarh","Baghpat","Bahraich","Ballia","Balrampur","Banda","Barabanki","Bareilly","Basti","Bijnor","Budaun","Bulandshahr","Chandauli","Chitrakoot","Deoria","Etah","Etawah","Farrukhabad","Fatehpur","Firozabad","Gautam Buddh Nagar","Ghaziabad","Ghazipur","Gonda","Gorakhpur","Hamirpur","Hapur","Hardoi","Hathras","Jalaun","Jaunpur","Jhansi","Kannauj","Kanpur Dehat","Kanpur Nagar","Kasganj","Kaushambi","Lakhimpur Kheri","Kushinagar","Lalitpur","Lucknow","Maharajganj","Mahoba","Mainpuri","Mathura","Mau","Meerut","Mirzapur","Moradabad","Muzaffarnagar","Pilibhit","Pratapgarh","Prayagraj","Raebareli","Rampur","Saharanpur","Sambhal","Sant Kabir Nagar","Shahjahanpur","Shamli","Shravasti","Siddharthnagar","Sitapur","Sonbhadra","Sultanpur","Unnao","Varanasi"]},
+  RJ:{n:"Rajasthan",e:"🏰",tl:"Land of Kings",cap:"Jaipur",cm:"Bhajanlal Sharma",party:"BJP",pop:"6.86 Crore",pin:"301001–344703",clim:"Arid Thar desert; extreme heat (50°C+), cold winters, very sparse rainfall",fam:"Forts & Palaces, Camel safari, Rajasthani block prints, Folk music",tour:"Jaipur Pink City, Udaipur Lake City, Jodhpur, Jaisalmer Fort, Pushkar, Ranthambore",riv:"Chambal, Luni, Banas, Mahi",crop:"Wheat, Bajra, Jowar, Mustard, Groundnut",fest:"Pushkar Camel Fair, Desert Festival, Teej, Gangaur, Marwar Festival",temp:"Brahma Temple Pushkar, Dilwara Jain Temples (Mt.Abu), Karni Mata, Srinathji Nathdwara",dist:["Ajmer","Alwar","Banswara","Baran","Barmer","Bharatpur","Bhilwara","Bikaner","Bundi","Chittorgarh","Churu","Dausa","Dholpur","Dungarpur","Ganganagar","Hanumangarh","Jaipur","Jaisalmer","Jalore","Jhalawar","Jhunjhunu","Jodhpur","Karauli","Kota","Nagaur","Pali","Pratapgarh","Rajsamand","Sawai Madhopur","Sikar","Sirohi","Tonk","Udaipur"]},
+  BR:{n:"Bihar",e:"🪔",tl:"Land of Buddha & Chanakya",cap:"Patna",cm:"Nitish Kumar",party:"JDU–NDA Alliance",pop:"10.4 Crore",pin:"800001–855117",clim:"Subtropical; hot humid, cold winters, heavy monsoon rains",fam:"Bodh Gaya, Maithili culture, Litti Chokha cuisine, Chhath Puja",tour:"Bodh Gaya, Nalanda Ruins, Rajgir, Vaishali, Patna Sahib Gurudwara",riv:"Ganga, Gandak, Kosi, Sone, Bagmati",crop:"Rice, Wheat, Sugarcane, Maize, Vegetables",fest:"Chhath Puja, Sonepur Mela, Sama Chakeba, Makar Sankranti",temp:"Mahabodhi Temple Bodh Gaya, Vishnupad Temple Gaya, Mundeshwari Temple",dist:["Araria","Arwal","Aurangabad","Banka","Begusarai","Bhagalpur","Bhojpur","Buxar","Darbhanga","East Champaran","Gaya","Gopalganj","Jamui","Jehanabad","Kaimur","Katihar","Khagaria","Kishanganj","Lakhisarai","Madhepura","Madhubani","Munger","Muzaffarpur","Nalanda","Nawada","Patna","Purnia","Rohtas","Saharsa","Samastipur","Saran","Sheikhpura","Sheohar","Sitamarhi","Siwan","Supaul","Vaishali","West Champaran"]},
+  JH:{n:"Jharkhand",e:"⛏️",tl:"Land of Forests",cap:"Ranchi",cm:"Hemant Soren",party:"JMM Alliance",pop:"3.29 Crore",pin:"814101–835325",clim:"Subtropical; hot summers, moderate winters, heavy monsoon",fam:"Tribal culture (32 tribes), Mineral wealth, Waterfalls, Dhokra art",tour:"Hundru Falls, Betla National Park, Deoghar, Netarhat, Jamshedpur",riv:"Damodar, Subarnarekha, North Koel, South Koel",crop:"Rice, Maize, Wheat, Pulses, Vegetables",fest:"Sarhul, Karma, Tusu, Sohrai, Jitia",temp:"Baidyanath Temple Deoghar (Jyotirlinga), Pahari Mandir Ranchi, Jagannath Temple",dist:["Bokaro","Chatra","Deoghar","Dhanbad","Dumka","East Singhbhum","Garhwa","Giridih","Godda","Gumla","Hazaribagh","Jamtara","Khunti","Koderma","Latehar","Lohardaga","Pakur","Palamu","Ramgarh","Ranchi","Sahibganj","Seraikela Kharsawan","Simdega","West Singhbhum"]},
+  WB:{n:"West Bengal",e:"🎨",tl:"Cultural Capital of India",cap:"Kolkata",cm:"Mamata Banerjee",party:"AITC (Trinamool Congress)",pop:"9.13 Crore",pin:"700001–743713",clim:"Tropical; hot humid summers, mild winters, very heavy monsoon",fam:"Durga Puja, Bengali literature, Rasogolla, Mishti Doi, Jute",tour:"Darjeeling, Sundarbans (UNESCO), Kolkata, Digha Beach, Bishnupur",riv:"Ganga (Hooghly), Damodar, Teesta, Mahananda",crop:"Rice, Jute, Tea, Potato, Mustard",fest:"Durga Puja, Diwali (Kali Puja), Poila Boishakh, Eid, Christmas",temp:"Dakshineswar Kali Temple, Belur Math, Kalighat Temple, Tarakeshwar",dist:["Alipurduar","Bankura","Birbhum","Cooch Behar","Dakshin Dinajpur","Darjeeling","Hooghly","Howrah","Jalpaiguri","Jhargram","Kalimpong","Kolkata","Maldah","Murshidabad","Nadia","North 24 Parganas","Paschim Bardhaman","Paschim Medinipur","Purba Bardhaman","Purba Medinipur","Purulia","South 24 Parganas","Uttar Dinajpur"]},
+  SK:{n:"Sikkim",e:"🌺",tl:"Organic State of India",cap:"Gangtok",cm:"Prem Singh Tamang (Golay)",party:"SKM",pop:"6.1 Lakh",pin:"737101–737139",clim:"Alpine north (harsh cold), temperate south; India's first organic state",fam:"First fully organic farming state, Cardamom capital, Monasteries",tour:"Nathula Pass, Tsomgo Lake, Pelling, Yuksom, Rumtek Monastery",riv:"Teesta, Rangit, Lachung Chu",crop:"Cardamom, Ginger, Maize, Rice, Orange",fest:"Losar, Saga Dawa, Dasain, Tihar, Maghe Sankranti",temp:"Rumtek Monastery, Enchey Monastery, Tashiding Monastery, Phodong Monastery",dist:["East Sikkim","North Sikkim","South Sikkim","West Sikkim"]},
+  AR:{n:"Arunachal Pradesh",e:"🏔️",tl:"Land of Dawn-Lit Mountains",cap:"Itanagar",cm:"Pema Khandu",party:"BJP",pop:"13.8 Lakh",pin:"790001–792130",clim:"Alpine north, tropical south; heavy rainfall throughout",fam:"26 tribal groups, Tawang Monastery, Bamboo crafts, Rare orchids",tour:"Tawang Monastery, Namdapha NP, Ziro Valley, Sela Pass, Bomdila",riv:"Brahmaputra (Siang), Subansiri, Kameng, Tirap",crop:"Rice, Maize, Millet, Ginger, Large Cardamom",fest:"Losar, Solung, Nyokum, Dree Festival, Ponung",temp:"Tawang Monastery, Malinithan Temple, Bhismaknagar Fort",dist:["Anjaw","Changlang","Dibang Valley","East Kameng","East Siang","Kamle","Kra Daadi","Kurung Kumey","Lohit","Longding","Lower Dibang Valley","Lower Siang","Lower Subansiri","Namsai","Pakke-Kessang","Papum Pare","Shi-Yomi","Siang","Tawang","Tirap","Upper Siang","Upper Subansiri","West Kameng","West Siang"]},
+  AS:{n:"Assam",e:"🍵",tl:"Land of Blue Hills & Red Rivers",cap:"Dispur",cm:"Himanta Biswa Sarma",party:"BJP",pop:"3.12 Crore",pin:"781001–788931",clim:"Subtropical; hot humid, heavy monsoon, seasonal floods",fam:"Assam tea, Muga silk, One-horned rhino, Bihu dance",tour:"Kaziranga NP, Majuli Island, Kamakhya Temple, Sivasagar",riv:"Brahmaputra, Barak, Subansiri, Dhansiri",crop:"Tea, Rice, Jute, Mustard, Sugarcane",fest:"Bihu (Rongali / Bhogali / Kongali), Ambubachi Mela",temp:"Kamakhya Temple, Umananda Temple, Hayagriva Madhava Temple",dist:["Baksa","Barpeta","Biswanath","Bongaigaon","Cachar","Charaideo","Chirang","Darrang","Dhemaji","Dhubri","Dibrugarh","Dima Hasao","Goalpara","Golaghat","Hailakandi","Hojai","Jorhat","Kamrup","Kamrup Metropolitan","Karbi Anglong","Karimganj","Kokrajhar","Lakhimpur","Majuli","Morigaon","Nagaon","Nalbari","Sivasagar","Sonitpur","Tinsukia","Udalguri","West Karbi Anglong"]},
+  NL:{n:"Nagaland",e:"🦅",tl:"Land of Festivals",cap:"Kohima",cm:"Neiphiu Rio",party:"NDPP Alliance",pop:"19.8 Lakh",pin:"797001–798627",clim:"Subtropical highland; cool and pleasant, very heavy monsoon",fam:"Hornbill Festival, Naga shawls, Kohima War Cemetery, 17 major tribes",tour:"Kohima War Cemetery, Dzukou Valley, Khonoma Heritage Village, Doyang Lake",riv:"Doyang, Dhansiri, Tizu, Barak",crop:"Rice, Maize, Millet, Tea, Sugarcane",fest:"Hornbill Festival (Dec), Sekrenyi, Moatsu, Tuluni",temp:"Primarily Christian churches; Nagaland has 17 diverse tribal faiths",dist:["Dimapur","Kiphire","Kohima","Longleng","Mokokchung","Mon","Noklak","Peren","Phek","Tuensang","Wokha","Zunheboto"]},
+  MN:{n:"Manipur",e:"🎭",tl:"Jewel of India",cap:"Imphal",cm:"N. Biren Singh",party:"BJP",pop:"28.5 Lakh",pin:"795001–795150",clim:"Subtropical; moderate temperatures, very heavy monsoon",fam:"Manipuri classical dance, Birthplace of Polo, Loktak Lake, Handloom",tour:"Loktak Lake, Imphal War Cemetery, Keibul Lamjao NP, Shree Govindaji Temple",riv:"Barak, Imphal River, Manipur River",crop:"Rice, Vegetables, Sugarcane, Orange, Banana",fest:"Yaoshang (Manipuri Holi), Lai Haraoba, Cheiraoba, Ningol Chakouba",temp:"Shree Govindaji Temple Imphal, Bishnupur Temples, Thangjing Temple",dist:["Bishnupur","Chandel","Churachandpur","Imphal East","Imphal West","Jiribam","Kakching","Kamjong","Kangpokpi","Noney","Pherzawl","Senapati","Tamenglong","Tengnoupal","Thoubal","Ukhrul"]},
+  MZ:{n:"Mizoram",e:"🌸",tl:"Land of Blue Mountains",cap:"Aizawl",cm:"Lalduhoma",party:"Zoram People's Movement (ZPM)",pop:"10.9 Lakh",pin:"796001–796901",clim:"Subtropical; cool summers, very heavy monsoon, mild winters",fam:"Bamboo products, Mizo music & dance, Anthurium flowers",tour:"Aizawl city, Phawngpui Blue Mountain, Vantawng Falls, Champhai",riv:"Tlawng, Tuivai, Chhimtuipui",crop:"Rice, Maize, Ginger, Turmeric, Banana",fest:"Chapchar Kut (spring), Mim Kut, Pawl Kut (harvest), Christmas",temp:"Solomon's Temple Aizawl — predominantly Christian state",dist:["Aizawl","Champhai","Hnahthial","Khawzawl","Kolasib","Lawngtlai","Lunglei","Mamit","Saitual","Serchhip","Siaha"]},
+  TR:{n:"Tripura",e:"🏛️",tl:"Land of Natural Beauty",cap:"Agartala",cm:"Manik Saha",party:"BJP",pop:"36.7 Lakh",pin:"799001–799290",clim:"Tropical; hot humid summers, mild winters, heavy monsoon",fam:"Ujjayanta Palace, Unakoti rock carvings, Rubber, Tea, Tribal weaving",tour:"Ujjayanta Palace, Neermahal Water Palace, Unakoti rock sculptures",riv:"Gumti, Haora, Khowai, Manu",crop:"Rice, Jute, Tea, Rubber, Pineapple",fest:"Durga Puja, Kharchi Puja (14-day tribal), Garia Puja, Ker Puja",temp:"Tripura Sundari Temple (Shakti Peetha), Unakoti rock-cut temples",dist:["Dhalai","Gomati","Khowai","North Tripura","Sipahijala","South Tripura","Unakoti","West Tripura"]},
+  ML:{n:"Meghalaya",e:"☁️",tl:"Abode of Clouds",cap:"Shillong",cm:"Conrad Sangma",party:"NPP Alliance",pop:"29.6 Lakh",pin:"793001–794115",clim:"Subtropical highland; Cherrapunji & Mawsynram are among wettest places on Earth",fam:"Living root bridges, Matrilineal Khasi society, Mawsynram rainfall record",tour:"Shillong, Cherrapunji, Dawki River, Mawlynnong, Elephant Falls",riv:"Kopili, Umiam, Myntdu, Simsang",crop:"Rice, Maize, Potato, Ginger, Citrus fruits",fest:"Shad Suk Mynsiem, Nongkrem Dance Festival, Wangala Festival, Christmas",temp:"Nartiang Durga Temple, Siju Cave, Mawphlang Sacred Forest Grove",dist:["East Garo Hills","East Jaintia Hills","East Khasi Hills","North Garo Hills","Ri Bhoi","South Garo Hills","South West Garo Hills","South West Khasi Hills","West Garo Hills","West Jaintia Hills","West Khasi Hills","Eastern West Khasi Hills"]},
+  OD:{n:"Odisha",e:"🛕",tl:"Soul of Incredible India",cap:"Bhubaneswar",cm:"Mohan Charan Majhi",party:"BJP",pop:"4.19 Crore",pin:"751001–770076",clim:"Tropical; hot summers, heavy monsoon, cyclone-prone eastern coastline",fam:"Jagannath Temple Puri, Odissi classical dance, Sambalpuri saree, Pattachitra art",tour:"Puri (Jagannath Temple), Konark Sun Temple (UNESCO), Bhubaneswar temples, Chilika Lake",riv:"Mahanadi, Brahmani, Baitarani, Rushikulya",crop:"Rice, Pulses, Oilseeds, Sugarcane, Jute",fest:"Rath Yatra (Puri), Durga Puja, Raja Parba, Nuakhai, Pana Sankranti",temp:"Jagannath Temple Puri, Konark Sun Temple, Lingaraja Temple, Mukteshvara Temple",dist:["Angul","Balangir","Balasore","Bargarh","Bhadrak","Boudh","Cuttack","Deogarh","Dhenkanal","Gajapati","Ganjam","Jagatsinghpur","Jajpur","Jharsuguda","Kalahandi","Kandhamal","Kendrapara","Kendujhar","Khordha","Koraput","Malkangiri","Mayurbhanj","Nabarangpur","Nayagarh","Nuapada","Puri","Rayagada","Sambalpur","Sonepur","Sundargarh"]},
+  CG:{n:"Chhattisgarh",e:"🌊",tl:"Rice Bowl of Central India",cap:"Raipur",cm:"Vishnu Deo Sai",party:"BJP",pop:"2.55 Crore",pin:"490001–497778",clim:"Tropical; very hot dry summers, heavy monsoon rainfall",fam:"Tribal culture, Dhokra metal art, Bastar handicrafts, Dense forests",tour:"Chitrakoot Falls, Tirathgarh Falls, Bastar, Barnawapara WLS, Sirpur",riv:"Mahanadi, Indravati, Sheonath, Hasdeo",crop:"Rice, Maize, Pulses, Oilseeds, Sugarcane",fest:"Bastar Dussehra, Madai Festival, Hareli, Pola",temp:"Dongargarh Bambleshwari, Rajim Triveni Temples, Bhoramdeo Temple",dist:["Balod","Baloda Bazar","Balrampur","Bastar","Bemetara","Bijapur","Bilaspur","Dantewada","Dhamtari","Durg","Gariaband","Janjgir-Champa","Jashpur","Kabirdham","Kanker","Kondagaon","Korba","Koriya","Mahasamund","Mungeli","Narayanpur","Raigarh","Raipur","Rajnandgaon","Sukma","Surajpur","Surguja"]},
+  MP:{n:"Madhya Pradesh",e:"🐯",tl:"Heart of India",cap:"Bhopal",cm:"Mohan Yadav",party:"BJP",pop:"7.26 Crore",pin:"450001–488776",clim:"Subtropical; very hot summers, moderate monsoon, cold winters",fam:"Tiger reserves (most in India), Khajuraho, Diamond mines, Gond tribal art",tour:"Khajuraho Temples (UNESCO), Bandhavgarh NP, Kanha Tiger Reserve, Sanchi Stupa, Orchha",riv:"Narmada, Tapti, Chambal, Betwa, Son",crop:"Soybean, Wheat, Pulses, Rice, Sugarcane",fest:"Tansen Samaroh Gwalior, Lokrang Festival, Khajuraho Dance Festival",temp:"Mahakaleshwar Ujjain (Jyotirlinga), Omkareshwar (Jyotirlinga), Khajuraho Group",dist:["Agar Malwa","Alirajpur","Anuppur","Ashoknagar","Balaghat","Barwani","Betul","Bhind","Bhopal","Burhanpur","Chhatarpur","Chhindwara","Damoh","Datia","Dewas","Dhar","Dindori","Guna","Gwalior","Harda","Hoshangabad","Indore","Jabalpur","Jhabua","Katni","Khandwa","Khargone","Mandla","Mandsaur","Morena","Narsinghpur","Neemuch","Niwari","Panna","Raisen","Rajgarh","Ratlam","Rewa","Sagar","Satna","Sehore","Seoni","Shahdol","Shajapur","Sheopur","Shivpuri","Sidhi","Singrauli","Tikamgarh","Ujjain","Umaria","Vidisha"]},
+  GJ:{n:"Gujarat",e:"🦁",tl:"Growth Engine of India",cap:"Gandhinagar",cm:"Bhupendrabhai Patel",party:"BJP",pop:"6.04 Crore",pin:"360001–396590",clim:"Arid to semi-arid; hot summers, mild winters, moderate monsoon",fam:"Textile industry, Garba dance, Dhokla cuisine, Salt flats, Amul dairy",tour:"Somnath Temple, Dwarka, Rann of Kutch, Gir Forest (Asiatic lions), Statue of Unity",riv:"Sabarmati, Narmada, Mahi, Tapi",crop:"Cotton, Groundnut, Castor, Tobacco, Wheat",fest:"Navratri (Garba), Uttarayan (Kite Festival), Rann Utsav, Diwali",temp:"Somnath Temple, Dwarkadheesh Temple, Ambaji Temple, Akshardham Gandhinagar",dist:["Ahmedabad","Amreli","Anand","Aravalli","Banaskantha","Bharuch","Bhavnagar","Botad","Chhota Udaipur","Dahod","Dang","Devbhoomi Dwarka","Gandhinagar","Gir Somnath","Jamnagar","Junagadh","Kheda","Kutch","Mahisagar","Mehsana","Morbi","Narmada","Navsari","Panchmahal","Patan","Porbandar","Rajkot","Sabarkantha","Surat","Surendranagar","Tapi","Vadodara","Valsad"]},
+  MH:{n:"Maharashtra",e:"🎬",tl:"Gateway of India",cap:"Mumbai",cm:"Devendra Fadnavis",party:"BJP–Mahayuti Alliance",pop:"11.24 Crore",pin:"400001–445401",clim:"Tropical coast, semi-arid interior Deccan, hot Vidarbha region",fam:"Bollywood, Vada Pav, Lavani dance, IT hubs, Ajanta-Ellora",tour:"Mumbai, Ajanta & Ellora Caves (UNESCO), Shirdi, Mahabaleshwar, Lonavala",riv:"Godavari, Krishna, Bhima, Tapi, Wardha",crop:"Sugarcane, Cotton, Soybean, Onion, Grapes",fest:"Ganesh Chaturthi, Gudi Padwa, Diwali, Eid, Christmas",temp:"Shirdi Sai Baba Mandir, Siddhivinayak Mumbai, Trimbakeshwar (Jyotirlinga)",dist:["Ahmednagar","Akola","Amravati","Aurangabad","Beed","Bhandara","Buldhana","Chandrapur","Dhule","Gadchiroli","Gondia","Hingoli","Jalgaon","Jalna","Kolhapur","Latur","Mumbai City","Mumbai Suburban","Nagpur","Nanded","Nandurbar","Nashik","Osmanabad","Palghar","Parbhani","Pune","Raigad","Ratnagiri","Sangli","Satara","Sindhudurg","Solapur","Thane","Wardha","Washim","Yavatmal"]},
+  TG:{n:"Telangana",e:"💎",tl:"Bangaru Telangana",cap:"Hyderabad",cm:"Revanth Reddy",party:"INC",pop:"3.5 Crore",pin:"500001–509412",clim:"Tropical semi-arid; hot dry summers, moderate monsoon",fam:"Hyderabadi Biryani, Pearls, IT capital of South India, Kakatiya heritage",tour:"Charminar, Golconda Fort, Hussain Sagar Lake, Ramoji Film City, Warangal Fort",riv:"Godavari, Krishna, Manair, Musi",crop:"Rice, Maize, Cotton, Turmeric, Sugarcane",fest:"Bathukamma flower festival, Bonalu, Ugadi, Diwali, Eid",temp:"Yadadri Lakshmi Narasimha Temple, Thousand Pillar Temple, Bhadrachalam Temple",dist:["Adilabad","Bhadradri Kothagudem","Hyderabad","Jagtial","Jangaon","Jayashankar Bhupalpally","Jogulamba Gadwal","Kamareddy","Karimnagar","Khammam","Kumuram Bheem","Mahabubabad","Mahabubnagar","Mancherial","Medak","Medchal-Malkajgiri","Mulugu","Nagarkurnool","Nalgonda","Narayanpet","Nirmal","Nizamabad","Peddapalli","Rajanna Sircilla","Rangareddy","Sangareddy","Siddipet","Suryapet","Vikarabad","Wanaparthy","Warangal Rural","Warangal Urban","Yadadri Bhuvanagiri"]},
+  AP:{n:"Andhra Pradesh",e:"🌶️",tl:"Rice Bowl of India",cap:"Amaravati",cm:"N. Chandrababu Naidu",party:"Telugu Desam Party (TDP)",pop:"4.94 Crore",pin:"500002–535590",clim:"Tropical monsoon; hot coastal climate, heavy seasonal rains",fam:"Tirupati Balaji, Kuchipudi dance, Spicy cuisine, Kondapalli toys, Pearls",tour:"Tirupati, Araku Valley, Visakhapatnam, Amaravati, Lepakshi Temple",riv:"Godavari, Krishna, Penna, Vamsadhara",crop:"Rice, Sugarcane, Cotton, Tobacco, Chilli",fest:"Ugadi, Sankranti, Vijayadashami, Tirupati Brahmotsavam",temp:"Venkateswara Temple Tirupati, Mallikarjuna Srisailam, Kanaka Durga Vijayawada",dist:["Alluri Sitarama Raju","Anakapalli","Anantapur","Annamayya","Bapatla","Chittoor","East Godavari","Eluru","Guntur","Kakinada","Krishna","Kurnool","Nandyal","NTR","Palnadu","Parvathipuram Manyam","Prakasam","Sri Balaji","Sri Sathya Sai","Srikakulam","Tirupati","Visakhapatnam","Vizianagaram","West Godavari","YSR Kadapa"]},
+  KA:{n:"Karnataka",e:"🏯",tl:"One State, Many Worlds",cap:"Bengaluru",cm:"Siddaramaiah",party:"INC",pop:"6.11 Crore",pin:"560001–591343",clim:"Tropical coast, semi-arid Deccan plateau, cool Western Ghats",fam:"IT capital, Silk sarees, Coffee, Yakshagana dance, Sandalwood",tour:"Mysuru Palace, Hampi (UNESCO), Coorg, Gokarna, Badami, Jog Falls",riv:"Kaveri, Krishna, Tungabhadra, Sharavati",crop:"Coffee, Silk, Sugarcane, Cotton, Ragi",fest:"Mysuru Dasara, Ugadi, Hampi Festival, Karaga, Pattadakal Dance Festival",temp:"Virupaksha Temple Hampi, Chamundeshwari Mysuru, Shravanabelagola (Gommateshvara)",dist:["Bagalkot","Ballari","Belagavi","Bengaluru Rural","Bengaluru Urban","Bidar","Chamarajanagar","Chikkaballapura","Chikkamagaluru","Chitradurga","Dakshina Kannada","Davanagere","Dharwad","Gadag","Hassan","Haveri","Kalaburagi","Kodagu","Kolar","Koppal","Mandya","Mysuru","Raichur","Ramanagara","Shivamogga","Tumakuru","Udupi","Uttara Kannada","Vijayapura","Yadgir"]},
+  GA:{n:"Goa",e:"🏖️",tl:"Pearl of the Orient",cap:"Panaji",cm:"Pramod Sawant",party:"BJP",pop:"14.58 Lakh",pin:"403001–403806",clim:"Tropical; hot humid, very heavy monsoon, pleasant sunny winters",fam:"Beaches, Portuguese colonial heritage, Seafood, Carnival, Cashew feni",tour:"Baga Beach, Calangute, Old Goa Churches (UNESCO), Dudhsagar Falls",riv:"Mandovi, Zuari, Sal",crop:"Rice, Coconut, Cashew, Spices",fest:"Goa Carnival, Liberation Day, Shigmo Festival, Christmas",temp:"Shri Mangueshi Temple, Shantadurga Temple, Mahalasa Narayani Temple",dist:["North Goa","South Goa"]},
+  KL:{n:"Kerala",e:"🌴",tl:"God's Own Country",cap:"Thiruvananthapuram",cm:"Pinarayi Vijayan",party:"CPI(M) — LDF",pop:"3.34 Crore",pin:"670001–695615",clim:"Tropical; two monsoon seasons, heavy rainfall, lush year-round green",fam:"Ayurveda, Kathakali dance, Houseboat backwaters, Spices, 100% literacy",tour:"Alleppey Backwaters, Munnar Tea Estates, Kovalam Beach, Wayanad, Thrissur",riv:"Periyar, Pamba, Bharathapuzha, Chaliyar",crop:"Coconut, Rubber, Tea, Coffee, Black Pepper, Cardamom",fest:"Onam, Vishu, Thrissur Pooram (elephant festival), Christmas, Eid",temp:"Padmanabhaswamy Temple, Guruvayur Temple, Sabarimala Ayyappa",dist:["Alappuzha","Ernakulam","Idukki","Kannur","Kasaragod","Kollam","Kottayam","Kozhikode","Malappuram","Palakkad","Pathanamthitta","Thiruvananthapuram","Thrissur","Wayanad"]},
+  TN:{n:"Tamil Nadu",e:"🛕",tl:"Land of Temples & Culture",cap:"Chennai",cm:"M. K. Stalin",party:"DMK",pop:"7.21 Crore",pin:"600001–643253",clim:"Tropical; hot humid coast, semi-arid interior, receives two monsoons",fam:"Dravidian temple architecture, Classical Carnatic music, Silk sarees, Auto hub",tour:"Madurai Meenakshi Temple, Mahabalipuram (UNESCO), Ooty, Rameswaram, Marina Beach",riv:"Kaveri, Vaigai, Tambraparni, Palar",crop:"Rice, Sugarcane, Cotton, Banana, Groundnut",fest:"Pongal, Karthigai Deepam, Tamil New Year, Navaratri, Thaipoosam",temp:"Meenakshi Amman Madurai, Brihadeeshwara Thanjavur (UNESCO), Ramanathaswamy Rameswaram",dist:["Ariyalur","Chengalpattu","Chennai","Coimbatore","Cuddalore","Dharmapuri","Dindigul","Erode","Kallakurichi","Kancheepuram","Kanyakumari","Karur","Krishnagiri","Madurai","Mayiladuthurai","Nagapattinam","Namakkal","Nilgiris","Perambalur","Pudukkottai","Ramanathapuram","Ranipet","Salem","Sivaganga","Tenkasi","Thanjavur","Theni","Thoothukudi","Tiruchirappalli","Tirunelveli","Tirupathur","Tiruppur","Tiruvallur","Tiruvannamalai","Tiruvarur","Vellore","Villupuram","Virudhunagar"]},
+  PY:{n:"Puducherry",e:"⚜️",tl:"French Riviera of the East",cap:"Puducherry",cm:"N. Rangaswamy",party:"AINRC",pop:"12.47 Lakh",pin:"533001–605014",clim:"Tropical; hot humid, heavy northeast monsoon (Oct–Dec)",fam:"French colonial architecture, Auroville spiritual township, Yoga & meditation",tour:"Promenade Beach, Auroville, French Quarter, Sri Aurobindo Ashram",riv:"Gingee (Ponnaiyar River)",crop:"Rice, Sugarcane, Groundnut, Cotton",fest:"Bastille Day (July 14), Pongal, Masi Magam, Eid",temp:"Manakula Vinayagar Temple, Vedapuri Ishwaran Temple, Thirunallar Shani Temple",dist:["Karaikal","Mahe","Puducherry","Yanam"]},
+  AN:{n:"Andaman & Nicobar Islands",e:"🌊",tl:"Emerald Islands of India",cap:"Port Blair",cm:"UT — Lt. Governor",party:"Union Territory",pop:"3.8 Lakh",pin:"744101–744302",clim:"Tropical; hot humid year-round, very heavy rainfall (3000mm+)",fam:"Cellular Jail, Coral reefs, Scuba diving, Marine biodiversity",tour:"Cellular Jail Port Blair, Radhanagar Beach Havelock, Ross Island, Neil Island",riv:"No major rivers (island chain)",crop:"Coconut, Rice, Tropical fruits, Spices",fest:"Island Tourism Festival, Republic Day, Diwali",temp:"Port Blair Durga Temple — predominantly Christian & Muslim population",dist:["Nicobar","North & Middle Andaman","South Andaman"]},
+  LD:{n:"Lakshadweep",e:"🐠",tl:"Coral Paradise of India",cap:"Kavaratti",cm:"UT — Administrator",party:"Union Territory",pop:"64,473",pin:"682551–682559",clim:"Tropical maritime; hot humid, heavy monsoon May–September",fam:"Coral atolls, Crystal-clear lagoons, Water sports, Coconut products",tour:"Agatti Island, Bangaram Atoll, Kavaratti, Minicoy Island",riv:"No rivers (coral island chain in Arabian Sea)",crop:"Coconut, Tuna fishing, Breadfruit",fest:"Eid ul-Fitr, Eid ul-Adha, Muharram",temp:"Predominantly Muslim islands",dist:["Lakshadweep (single district)"]},
+  CH:{n:"Chandigarh",e:"🌹",tl:"The City Beautiful",cap:"Chandigarh",cm:"UT — Administrator",party:"Union Territory",pop:"10.55 Lakh",pin:"160001–160102",clim:"Humid subtropical; hot summers, cold winters, moderate monsoon",fam:"Planned city designed by Le Corbusier, Rock Garden, Rose Garden, Education hub",tour:"Rock Garden (Nek Chand), Sukhna Lake, Rose Garden Zakir Husain, Capitol Complex",riv:"Sukhna Choe (seasonal)",crop:"Urban UT — minimal agriculture",fest:"Rose Festival, Chandigarh Carnival, Baisakhi, Diwali",temp:"Nada Sahib Gurudwara, Mata Mansa Devi Temple",dist:["Chandigarh"]},
+  DD:{n:"Dadra & NH / Daman & Diu",e:"⚓",tl:"Coastal Union Territory",cap:"Daman",cm:"UT — Administrator",party:"Union Territory",pop:"5.86 Lakh",pin:"362510–396193",clim:"Tropical; hot humid, moderate monsoon",fam:"Beach tourism, Portuguese heritage, Duty-free goods, Fishing",tour:"Daman Fort, Nagoa Beach Diu, Silvassa, Jampore Beach",riv:"Damanganga",crop:"Rice, Pulses, Sugarcane, Tropical fruits",fest:"Daman & Diu Liberation Day, Christmas, Navratri",temp:"Gangeshwar Temple Diu, Naida Caves",dist:["Dadra & Nagar Haveli","Daman","Diu"]},
+};
+
+const tip=document.getElementById("tip");
+let curDist=[],curSN="";
+
+// Click handlers
+document.querySelectorAll(".sp").forEach(el=>{
+  el.addEventListener("mousemove",ev=>{
+    const id=el.id, s=SD[id];
+    tip.style.display="block";
+    tip.style.left=(ev.clientX+13)+"px";
+    tip.style.top=(ev.clientY-8)+"px";
+    tip.textContent=s?s.n:id;
+  });
+  el.addEventListener("mouseleave",()=>tip.style.display="none");
+  el.addEventListener("click",()=>{
+    document.querySelectorAll(".sp").forEach(p=>p.classList.remove("active"));
+    el.classList.add("active");
+    tip.style.display="none";
+    showState(el.id);
+  });
+});
+
+function showState(id){
+  const s=SD[id];
+  document.getElementById("welcomeMsg").style.display="none";
+  const panel=document.getElementById("stateInfo");
+  panel.classList.remove("on");void panel.offsetWidth;panel.classList.add("on");
+  if(!s){
+    document.getElementById("sEmoji").textContent="🗺️";
+    document.getElementById("sName").textContent=id;
+    document.getElementById("sTagline").textContent="Exploring…";
+    document.getElementById("sGrid").innerHTML=`<div class="card"><div class="clabel">ℹ️ Info</div><div class="cval">Data coming soon.</div></div>`;
+    return;
+  }
+  curSN=s.n; curDist=s.dist||[];
+  document.getElementById("sEmoji").textContent=s.e;
+  document.getElementById("sName").textContent=s.e+" "+s.n;
+  document.getElementById("sTagline").textContent=s.tl;
+  const g=document.getElementById("sGrid"); g.innerHTML="";
+  [
+    {i:"🏛️",l:"Capital City",        v:`<strong>${s.cap}</strong>`},
+    {i:"👤",l:"Chief Minister",       v:`<strong>${s.cm}</strong>`},
+    {i:"🏳️",l:"Ruling Party",         v:`<strong>${s.party}</strong>`},
+    {i:"👥",l:"Population",           v:`<strong>${s.pop} (Census 2011)</strong>`},
+    {i:"📮",l:"PIN Code Range",       v:`<strong>${s.pin}</strong>`},
+    {i:"🌤️",l:"Climate",              v:s.clim},
+    {i:"🗺️",l:"Districts",           v:`<strong style="font-size:1.4rem;color:var(--saffron)">${s.dist.length}</strong> <span style="font-size:.78rem;color:rgba(255,255,255,.4)">Districts</span><br><button class="dbtn" onclick="openM()">📋 View All Districts</button>`},
+    {i:"🌊",l:"Major Rivers",         v:tags(s.riv,"b")},
+    {i:"🌾",l:"Major Crops",          v:tags(s.crop,"g")},
+    {i:"⭐",l:"Famous For",           v:s.fam,w:1},
+    {i:"✈️",l:"Tourist Spots",        v:tags(s.tour,""),w:1},
+    {i:"🎊",l:"Festivals",            v:tags(s.fest,"y")},
+    {i:"🛕",l:"Temples & Shrines",    v:s.temp,w:1},
+  ].forEach(c=>{
+    const d=document.createElement("div");
+    d.className="card"+(c.w?" w2":"");
+    d.innerHTML=`<div class="clabel"><span>${c.i}</span>${c.l}</div><div class="cval">${c.v}</div>`;
+    g.appendChild(d);
+  });
+}
+
+function tags(str,cls){
+  return`<div class="tags">${str.split(",").map(t=>`<span class="tag ${cls}">${t.trim()}</span>`).join("")}</div>`;
+}
+function openM(){
+  document.getElementById("mTitle").textContent=curSN+" — Districts";
+  document.getElementById("mCnt").textContent=`Total: ${curDist.length} Districts`;
+  document.getElementById("mList").innerHTML=curDist.map((d,i)=>`<div class="ditem"><span class="dnum">${String(i+1).padStart(2,"0")}.</span>${d}</div>`).join("");
+  document.getElementById("distModal").classList.add("on");
+}
+function closeM(){document.getElementById("distModal").classList.remove("on");}
+document.getElementById("distModal").addEventListener("click",e=>{if(e.target.id==="distModal")closeM();});
+</script>
+</body>
+</html>
